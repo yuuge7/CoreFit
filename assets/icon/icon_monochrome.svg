@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Android 13+ themed icon: single-color silhouette, same safe zone. -->
+  <g transform="translate(512 512) scale(0.72) translate(-512 -512)" fill="none">
+    <path d="M 220 700 L 420 500 L 530 610 L 800 340"
+          stroke="#FFFFFF"
+          stroke-width="96" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="220" cy="700" r="46" fill="#FFFFFF"/>
+    <circle cx="800" cy="340" r="88" fill="#FFFFFF"/>
+  </g>
+</svg>

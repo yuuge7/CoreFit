@@ -1,0 +1,81 @@
+name: Release
+
+# Every push to main builds a release APK and publishes it as a GitHub
+# release. The tag combines the pubspec version with the run number so each
+# push gets a unique, traceable release (v1.0.0-b42).
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Read version from pubspec
+        id: version
+        run: |
+          echo "version=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)" >> "$GITHUB_OUTPUT"
+
+      # Recreates the signing files that are gitignored locally. Requires two
+      # repository secrets:
+      #   ANDROID_KEYSTORE_BASE64   — base64 of corefit-release.keystore
+      #   ANDROID_KEYSTORE_PASSWORD — the keystore/key password
+      # Without them the build falls back to debug signing (see
+      # android/app/build.gradle.kts), which breaks in-place updates.
+      - name: Set up release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::Signing secrets not set — APK will be debug-signed"
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/corefit-release.keystore
+          cat > android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEYSTORE_PASSWORD
+          keyAlias=corefit
+          storeFile=corefit-release.keystore
+          EOF
+
+      - name: Build release APK
+        run: flutter build apk --release --build-number=${{ github.run_number }}
+
+      - name: Rename APK
+        run: |
+          mv build/app/outputs/flutter-apk/app-release.apk \
+            corefit-v${{ steps.version.outputs.version }}-b${{ github.run_number }}.apk
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}-b${{ github.run_number }}
+          name: CoreFit v${{ steps.version.outputs.version }} (build ${{ github.run_number }})
+          generate_release_notes: true
+          files: corefit-*.apk

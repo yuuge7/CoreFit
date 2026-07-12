@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#241812"/>
+      <stop offset="1" stop-color="#140E0B"/>
+    </linearGradient>
+    <linearGradient id="route" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#FF5722"/>
+      <stop offset="1" stop-color="#FFA726"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- Faint track behind the route -->
+  <path d="M 220 700 L 420 500 L 530 610 L 800 340"
+        fill="none" stroke="#FFFFFF" stroke-opacity="0.08"
+        stroke-width="180" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Route: climb, dip, summit -->
+  <path d="M 220 700 L 420 500 L 530 610 L 800 340"
+        fill="none" stroke="url(#route)"
+        stroke-width="96" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Start marker -->
+  <circle cx="220" cy="700" r="46" fill="#FFE0B2"/>
+
+  <!-- Current-position dot at the summit -->
+  <circle cx="800" cy="340" r="88" fill="#FFA726"/>
+  <circle cx="800" cy="340" r="52" fill="#FFFFFF"/>
+</svg>
