@@ -1,8 +1,9 @@
 name: Release
 
-# Every push to main builds a release APK and publishes it as a GitHub
-# release. The tag combines the pubspec version with the run number so each
-# push gets a unique, traceable release (v1.0.0-b42).
+# Every push to main builds a signed release APK and publishes it as a
+# GitHub release named "CoreFit v1.<n>", where <n> auto-increments with the
+# workflow run number. No version bump commits are ever pushed back — the
+# version is derived entirely in CI, so the repo history stays yours alone.
 
 on:
   push:
@@ -10,6 +11,10 @@ on:
 
 permissions:
   contents: write
+
+env:
+  APP_NAME: CoreFit
+  VERSION_MAJOR: "1"
 
 jobs:
   release:
@@ -36,10 +41,10 @@ jobs:
       - name: Test
         run: flutter test
 
-      - name: Read version from pubspec
+      - name: Compute version
         id: version
         run: |
-          echo "version=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION_MAJOR}.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
       # Recreates the signing files that are gitignored locally. Requires two
       # repository secrets:
@@ -65,17 +70,20 @@ jobs:
           EOF
 
       - name: Build release APK
-        run: flutter build apk --release --build-number=${{ github.run_number }}
+        run: >
+          flutter build apk --release
+          --build-name=${{ steps.version.outputs.version }}
+          --build-number=${{ github.run_number }}
 
       - name: Rename APK
         run: |
           mv build/app/outputs/flutter-apk/app-release.apk \
-            corefit-v${{ steps.version.outputs.version }}-b${{ github.run_number }}.apk
+            "${APP_NAME}-v${{ steps.version.outputs.version }}.apk"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}-b${{ github.run_number }}
-          name: CoreFit v${{ steps.version.outputs.version }} (build ${{ github.run_number }})
+          tag_name: v${{ steps.version.outputs.version }}
+          name: ${{ env.APP_NAME }} v${{ steps.version.outputs.version }}
           generate_release_notes: true
-          files: corefit-*.apk
+          files: ${{ env.APP_NAME }}-v*.apk
