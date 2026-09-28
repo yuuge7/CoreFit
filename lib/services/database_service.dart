@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 
 import '../models/activity.dart';
@@ -56,6 +57,10 @@ class DatabaseService {
   }
 
   // ---------------------------------------------------------------- activities
+
+  /// Notifies on every summary write or delete, i.e. any activity save,
+  /// edit, delete or import. One shared instance so listeners can detach.
+  late final Listenable activityIndexChanged = _index.listenable();
 
   /// Persists the full activity and refreshes its summary in the index.
   Future<void> saveActivity(Activity activity) async {

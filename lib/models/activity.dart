@@ -30,7 +30,10 @@ class Activity {
         title = title ?? '${type.label} activity';
 
   final String id;
-  final ActivityType type;
+
+  /// Mutable so a saved activity can be re-labelled (e.g. walk recorded as
+  /// a run); the GPS track doesn't depend on it.
+  ActivityType type;
   final DateTime startTime;
   DateTime? endTime;
   final List<ActivitySegment> segments;

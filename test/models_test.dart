@@ -136,6 +136,55 @@ void main() {
       expect(restored.movingTimeSeconds, activity.movingTimeSeconds);
     });
 
+    test('edited activity persists new metadata without touching the track',
+        () {
+      final start = DateTime.utc(2026, 7, 11, 8);
+      final activity = Activity(
+        id: 'a4',
+        type: ActivityType.running,
+        startTime: start,
+        endTime: start.add(const Duration(minutes: 10)),
+        segments: [
+          ActivitySegment(
+            startTime: start,
+            endTime: start.add(const Duration(minutes: 10)),
+            points: [
+              TrackPoint(latitude: 0, longitude: 0, timestamp: start),
+              TrackPoint(latitude: 0.01, longitude: 0, timestamp: start),
+            ],
+          ),
+        ],
+        title: 'Morning Running',
+        perceivedExertion: 8,
+      );
+      activity.recalculateStats();
+      final distanceBefore = activity.distanceMeters;
+
+      final edited = Activity.fromJson(activity.toJson())
+        ..type = ActivityType.walking
+        ..title = 'Morning Walking'
+        ..description = 'Actually a walk'
+        ..perceivedExertion = null;
+      edited.recalculateStats();
+
+      final restored = Activity.fromJson(edited.toJson());
+      expect(restored.type, ActivityType.walking);
+      expect(restored.title, 'Morning Walking');
+      expect(restored.description, 'Actually a walk');
+      expect(restored.perceivedExertion, isNull);
+      expect(restored.distanceMeters, distanceBefore);
+      expect(restored.toSummary().type, ActivityType.walking);
+    });
+
+    test('ActivityType lists walking first and serializes by name', () {
+      expect(ActivityType.values.first, ActivityType.walking);
+      for (final type in ActivityType.values) {
+        expect(ActivityType.fromJson(type.toJson()), type);
+      }
+      // Data written before the reorder still resolves by name.
+      expect(ActivityType.fromJson('running'), ActivityType.running);
+    });
+
     test('Challenge and Gear survive round-trips', () {
       final challenge = Challenge(
         id: 'c1',

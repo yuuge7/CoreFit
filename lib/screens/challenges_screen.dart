@@ -4,6 +4,7 @@ import '../models/challenge.dart';
 import '../services/database_service.dart';
 import '../utils/activity_ui.dart';
 import '../utils/format.dart';
+import '../widgets/activity_index_listener.dart';
 import 'challenge_edit_screen.dart';
 
 class ChallengesScreen extends StatefulWidget {
@@ -13,7 +14,8 @@ class ChallengesScreen extends StatefulWidget {
   State<ChallengesScreen> createState() => _ChallengesScreenState();
 }
 
-class _ChallengesScreenState extends State<ChallengesScreen> {
+class _ChallengesScreenState extends State<ChallengesScreen>
+    with ActivityIndexListener {
   Future<void> _openEditor([Challenge? existing]) async {
     await Navigator.of(context).push(
       MaterialPageRoute(

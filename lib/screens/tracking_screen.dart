@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../services/tracking_service.dart';
 import '../utils/activity_ui.dart';
 import '../utils/format.dart';
+import '../widgets/route_map.dart';
 import 'save_activity_screen.dart';
 
 /// Live recording: map on top, stats + controls below.
@@ -121,45 +122,63 @@ class _TrackingScreenState extends State<TrackingScreen> {
               children: [
                 Expanded(
                   flex: 3,
-                  child: FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: current ?? _fallbackCenter,
-                      initialZoom: 16,
-                      onMapReady: () => _mapReady = true,
-                    ),
+                  child: Stack(
                     children: [
-                      TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'dev.ionel.corefit',
-                      ),
-                      if (route.length >= 2)
-                        PolylineLayer(
-                          polylines: [
-                            Polyline(
-                              points: route,
-                              strokeWidth: 4,
-                              color: type?.color ?? Colors.deepOrange,
-                            ),
-                          ],
+                      FlutterMap(
+                        mapController: _mapController,
+                        options: MapOptions(
+                          initialCenter: current ?? _fallbackCenter,
+                          initialZoom: 16,
+                          minZoom: mapMinZoom,
+                          maxZoom: mapMaxZoom,
+                          interactionOptions:
+                              const InteractionOptions(flags: mapInteractionFlags),
+                          onMapReady: () => _mapReady = true,
                         ),
-                      if (current != null)
-                        MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: current,
-                              width: 20,
-                              height: 20,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.blueAccent,
-                                  border: Border.all(color: Colors.white, width: 3),
+                        children: [
+                          osmTileLayer(),
+                          if (route.length >= 2)
+                            PolylineLayer(
+                              polylines: [
+                                Polyline(
+                                  points: route,
+                                  strokeWidth: 4,
+                                  color: type?.color ?? Colors.deepOrange,
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
+                          if (current != null)
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: current,
+                                  width: 20,
+                                  height: 20,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.blueAccent,
+                                      border: Border.all(color: Colors.white, width: 3),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: MapZoomControls(
+                          controller: _mapController,
+                          onRecenter: current == null
+                              ? null
+                              : () => _mapController.move(
+                                    current,
+                                    _mapController.camera.zoom,
+                                  ),
                         ),
+                      ),
                     ],
                   ),
                 ),

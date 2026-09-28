@@ -5,6 +5,7 @@ import '../services/database_service.dart';
 import '../services/tracking_service.dart';
 import '../utils/activity_ui.dart';
 import '../utils/format.dart';
+import '../widgets/activity_index_listener.dart';
 import 'tracking_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -14,8 +15,9 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  ActivityType _selectedType = ActivityType.running;
+class _DashboardScreenState extends State<DashboardScreen>
+    with ActivityIndexListener {
+  ActivityType _selectedType = ActivityType.walking;
 
   Future<void> _start() async {
     final tracking = TrackingService.instance;

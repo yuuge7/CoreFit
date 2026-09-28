@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/activity.dart';
+import '../models/activity_type.dart';
 import '../models/gear.dart';
 import '../services/database_service.dart';
 import '../services/health_service.dart';
@@ -9,10 +10,18 @@ import '../utils/activity_ui.dart';
 import '../utils/format.dart';
 
 /// Post-activity save screen: title, notes, perceived exertion, gear.
+///
+/// With [isEditing], the same form edits an already-saved activity: fields
+/// are prefilled, there's no discard, and the screen pops `true` on save.
 class SaveActivityScreen extends StatefulWidget {
-  const SaveActivityScreen({super.key, required this.activity});
+  const SaveActivityScreen({
+    super.key,
+    required this.activity,
+    this.isEditing = false,
+  });
 
   final Activity activity;
+  final bool isEditing;
 
   @override
   State<SaveActivityScreen> createState() => _SaveActivityScreenState();
@@ -20,7 +29,8 @@ class SaveActivityScreen extends StatefulWidget {
 
 class _SaveActivityScreenState extends State<SaveActivityScreen> {
   late final TextEditingController _title;
-  final _description = TextEditingController();
+  late final TextEditingController _description;
+  late ActivityType _type;
   int _exertion = 5;
   bool _exertionSet = false;
   String? _gearId;
@@ -29,10 +39,21 @@ class _SaveActivityScreenState extends State<SaveActivityScreen> {
   @override
   void initState() {
     super.initState();
-    _title = TextEditingController(text: _defaultTitle());
+    final activity = widget.activity;
+    _type = activity.type;
+    if (widget.isEditing) {
+      _title = TextEditingController(text: activity.title);
+      _description = TextEditingController(text: activity.description);
+      _exertionSet = activity.perceivedExertion != null;
+      _exertion = activity.perceivedExertion ?? 5;
+      _gearId = activity.gearId;
+    } else {
+      _title = TextEditingController(text: _defaultTitle(_type));
+      _description = TextEditingController();
+    }
   }
 
-  String _defaultTitle() {
+  String _defaultTitle(ActivityType type) {
     final hour = widget.activity.startTime.toLocal().hour;
     final part = switch (hour) {
       >= 5 && < 12 => 'Morning',
@@ -40,7 +61,17 @@ class _SaveActivityScreenState extends State<SaveActivityScreen> {
       >= 17 && < 21 => 'Evening',
       _ => 'Night',
     };
-    return '$part ${widget.activity.type.label}';
+    return '$part ${type.label}';
+  }
+
+  void _setType(ActivityType type) {
+    setState(() {
+      // Keep an untouched auto-title in sync; never clobber a custom one.
+      if (_title.text.trim() == _defaultTitle(_type)) {
+        _title.text = _defaultTitle(type);
+      }
+      _type = type;
+    });
   }
 
   @override
@@ -50,8 +81,10 @@ class _SaveActivityScreenState extends State<SaveActivityScreen> {
     super.dispose();
   }
 
+  /// Active gear for the chosen type, plus whatever is already selected —
+  /// an edited activity may reference gear that's since been retired.
   List<Gear> get _availableGear => DatabaseService.instance.allGear
-      .where((g) => !g.retired && g.appliesTo(widget.activity.type))
+      .where((g) => g.id == _gearId || (!g.retired && g.appliesTo(_type)))
       .toList();
 
   Future<void> _addGear() async {
@@ -82,7 +115,7 @@ class _SaveActivityScreenState extends State<SaveActivityScreen> {
       id: const Uuid().v4(),
       name: name,
       createdAt: DateTime.now().toUtc(),
-      activityTypes: {widget.activity.type},
+      activityTypes: {_type},
     );
     await DatabaseService.instance.saveGear(gear);
     setState(() => _gearId = gear.id);
@@ -91,7 +124,9 @@ class _SaveActivityScreenState extends State<SaveActivityScreen> {
   Future<void> _save() async {
     setState(() => _saving = true);
     final activity = widget.activity;
-    activity.title = _title.text.trim().isEmpty ? _defaultTitle() : _title.text.trim();
+    activity.type = _type;
+    activity.title =
+        _title.text.trim().isEmpty ? _defaultTitle(_type) : _title.text.trim();
     activity.description =
         _description.text.trim().isEmpty ? null : _description.text.trim();
     activity.perceivedExertion = _exertionSet ? _exertion : null;
@@ -99,6 +134,13 @@ class _SaveActivityScreenState extends State<SaveActivityScreen> {
 
     final db = DatabaseService.instance;
     await db.saveActivity(activity);
+
+    // Health Connect is write-only from here and already holds the original
+    // session; re-syncing an edit would create a duplicate.
+    if (widget.isEditing) {
+      if (mounted) Navigator.of(context).pop(true);
+      return;
+    }
 
     var healthOk = true;
     if (db.healthSyncEnabled) {
@@ -147,8 +189,8 @@ class _SaveActivityScreenState extends State<SaveActivityScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Save activity'),
-        automaticallyImplyLeading: false,
+        title: Text(widget.isEditing ? 'Edit activity' : 'Save activity'),
+        automaticallyImplyLeading: widget.isEditing,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -159,18 +201,35 @@ class _SaveActivityScreenState extends State<SaveActivityScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  Icon(activity.type.icon, color: activity.type.color, size: 32),
+                  Icon(_type.icon, color: _type.color, size: 32),
                   _SummaryStat('Distance', Fmt.distance(activity.distanceMeters)),
                   _SummaryStat('Time', Fmt.duration(activity.movingTimeSeconds)),
                   _SummaryStat(
-                    activity.type.usesPace ? 'Pace' : 'Speed',
-                    activity.type.usesPace
+                    _type.usesPace ? 'Pace' : 'Speed',
+                    _type.usesPace
                         ? Fmt.pace(activity.avgPaceSecondsPerKm)
                         : Fmt.speed(activity.avgSpeedMps),
                   ),
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final type in ActivityType.values)
+                ChoiceChip(
+                  avatar: Icon(
+                    type.icon,
+                    color: _type == type ? Colors.white : type.color,
+                  ),
+                  label: Text(type.label),
+                  selected: _type == type,
+                  selectedColor: type.color,
+                  onSelected: (_) => _setType(type),
+                ),
+            ],
           ),
           const SizedBox(height: 16),
           TextField(
@@ -190,9 +249,20 @@ class _SaveActivityScreenState extends State<SaveActivityScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          Text(
-            'Perceived exertion: ${_exertionSet ? _exertion : 'not set'}',
-            style: Theme.of(context).textTheme.titleSmall,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Perceived exertion: ${_exertionSet ? _exertion : 'not set'}',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+              if (_exertionSet)
+                TextButton(
+                  onPressed: () => setState(() => _exertionSet = false),
+                  child: const Text('Clear'),
+                ),
+            ],
           ),
           Slider(
             value: _exertion.toDouble(),
@@ -233,14 +303,16 @@ class _SaveActivityScreenState extends State<SaveActivityScreen> {
           const SizedBox(height: 32),
           FilledButton.icon(
             icon: const Icon(Icons.save),
-            label: const Text('Save'),
+            label: Text(widget.isEditing ? 'Save changes' : 'Save'),
             onPressed: _saving ? null : _save,
           ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _saving ? null : _discard,
-            child: const Text('Discard'),
-          ),
+          if (!widget.isEditing) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _saving ? null : _discard,
+              child: const Text('Discard'),
+            ),
+          ],
         ],
       ),
     );

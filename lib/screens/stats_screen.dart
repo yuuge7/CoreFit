@@ -7,6 +7,7 @@ import '../models/activity_type.dart';
 import '../services/database_service.dart';
 import '../utils/activity_ui.dart';
 import '../utils/format.dart';
+import '../widgets/activity_index_listener.dart';
 
 enum _StatsMode { month, year }
 
@@ -18,7 +19,8 @@ class StatsScreen extends StatefulWidget {
   State<StatsScreen> createState() => _StatsScreenState();
 }
 
-class _StatsScreenState extends State<StatsScreen> {
+class _StatsScreenState extends State<StatsScreen>
+    with ActivityIndexListener {
   _StatsMode _mode = _StatsMode.month;
 
   /// First day of the shown period (month or year).

@@ -1,13 +1,16 @@
 /// Supported activity profiles.
+///
+/// Declaration order is display order in every picker. Persisted by name,
+/// never by index, so reordering is safe.
 enum ActivityType {
-  running,
   walking,
+  running,
   cycling,
   hiking;
 
   String get label => switch (this) {
-        ActivityType.running => 'Running',
         ActivityType.walking => 'Walking',
+        ActivityType.running => 'Running',
         ActivityType.cycling => 'Cycling',
         ActivityType.hiking => 'Hiking',
       };

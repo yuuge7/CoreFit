@@ -5,15 +5,18 @@ no analytics — every byte stays on the device.
 
 ## Features
 
-- **Activity profiles**: Running, Walking, Cycling, Hiking.
+- **Activity profiles**: Walking, Running, Cycling, Hiking.
 - **Live GPS tracking** on an OpenStreetMap map (`flutter_map`, no API keys)
   with pause/resume. Distance and time only accumulate while actually
   recording — pause models a structural gap, not a UI flag.
 - **Battery-aware recording**: per-activity distance filters, GPS fully off
   while paused, and background tracking via geolocator's Android foreground
   service (exists only while recording).
-- **Post-activity save screen**: title, notes, perceived exertion (1–10),
-  gear used.
+- **Post-activity save screen**: activity type, title, notes, perceived
+  exertion (1–10), gear used. Saved activities can be edited later from their
+  detail screen (same fields; the GPS track is never modified).
+- **Zoomable route maps**: pinch, drag, double-tap or +/− buttons on the
+  activity detail map, with fit-to-route and a full-screen view.
 - **Stats tab** (`fl_chart`): monthly and yearly views with Previous/Next
   navigation through past periods, filterable by activity type.
 - **Challenges**: weekly/monthly/yearly goals over distance, moving time, or
@@ -32,6 +35,7 @@ lib/
 ├── models/        # Pure Dart, JSON-serializable. No Flutter imports.
 ├── services/      # Singletons: database (Hive CE), tracking, health, export.
 ├── screens/       # UI. One file per screen.
+├── widgets/       # UI pieces shared across screens (route map, refresh mixin).
 └── utils/         # Geo math, formatting, activity-type UI mapping.
 ```
 

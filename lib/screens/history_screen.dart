@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../services/database_service.dart';
 import '../utils/activity_ui.dart';
 import '../utils/format.dart';
+import '../widgets/activity_index_listener.dart';
 import 'activity_detail_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -13,7 +14,8 @@ class HistoryScreen extends StatefulWidget {
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> {
+class _HistoryScreenState extends State<HistoryScreen>
+    with ActivityIndexListener {
   @override
   Widget build(BuildContext context) {
     final summaries = DatabaseService.instance.allSummaries;
@@ -46,14 +48,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ),
                     ],
                   ),
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ActivityDetailScreen(activityId: s.id),
-                      ),
-                    );
-                    setState(() {}); // Refresh after possible delete.
-                  },
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ActivityDetailScreen(activityId: s.id),
+                    ),
+                  ),
                 );
               },
             ),
